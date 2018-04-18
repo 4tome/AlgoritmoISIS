@@ -12,7 +12,8 @@ public class Servidor {
 
 	
 	public Servidor(){
-		
+		Proceso pc = new Proceso( "1");
+		pc.start();
 	}
 	
 	

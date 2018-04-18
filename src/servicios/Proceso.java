@@ -1,10 +1,10 @@
 package servicios;
 
 public class Proceso extends Thread {
-	
+	private String id;
 	//Constructor
-	public Proceso(){
-		
+	public Proceso( String id){
+		this.id = id;
 	}
 	
 	//Métodos para el incremento del tiempo lógico (Lamport)
@@ -31,7 +31,7 @@ public class Proceso extends Thread {
 	
 	//Método run
 	public void run(){
-	
+		System.out.println("Hola, soy el proceso" + this.id);
 	}
 
 
