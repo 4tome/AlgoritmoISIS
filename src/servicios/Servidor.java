@@ -23,13 +23,13 @@ public class Servidor {
 	public String start()
 	{
 		//Servicio para arrancar los procesos.
-		return "Process created sucessfully";
+		return "Procesos creados satisfactoriamente";
 	}
 	
-	@GET //tipo de petición HTTP
+	@GET //tipo de peticiï¿½n HTTP
 	@Produces(MediaType.TEXT_PLAIN) //tipo de texto devuelto
-	@Path("enviarMensaje") //ruta al método
-	public String enviarMensaje() //el método debe retornar String
+	@Path("enviarMensaje") //ruta al mï¿½todo
+	public String enviarMensaje() //el mï¿½todo debe retornar String
 	{ 
 		//
 		return "MENSAJE ENVIADO";
