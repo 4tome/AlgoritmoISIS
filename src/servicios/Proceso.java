@@ -3,6 +3,7 @@ package servicios;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -15,19 +16,45 @@ public class Proceso extends Thread {
 	private int reloj;
 	private int contador;
 	private List<Mensaje> cola = new ArrayList<Mensaje>();
+	private int Ci, Cj;
+	private Semaphore semTiempo;
 	
 	//Constructor
 	public Proceso(String id, int time){
 		this.id = id;
 		this.reloj = time;
+		this.semTiempo = new Semaphore(1);
 	}
 	
 	//Mï¿½todos para el incremento del tiempo lï¿½gico (Lamport)
 	public void LC1(){
-		this.reloj += 1;
+		
+		try {
+		      semTiempo.acquire(1);
+		      Ci = Ci + 1;
+		      semTiempo.release(1);
+		    } catch (InterruptedException e) {
+		      // TODO Auto-generated catch block
+		      e.printStackTrace();
+		    }
+		
+		//Creo que no haría falta pasar la variable reloj al proceso
+		this.reloj = Ci;
 	}
 	
 	public void LC2(){
+		
+		int t = Ci;
+	    
+	    try {
+	      semTiempo.acquire(1);
+	      Cj = Math.max(t, Cj) + 1;
+	      semTiempo.release(1);
+	    } catch (InterruptedException e) {
+	      // TODO Auto-generated catch block
+	      e.printStackTrace();
+	    }
+	    
 		
 	}
 	//Mï¿½todos para enviar los diferentes tipos de mensajes
