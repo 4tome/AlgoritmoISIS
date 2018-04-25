@@ -10,12 +10,13 @@ import javax.ws.rs.core.MediaType;
 @Singleton 
 @Path("Servidor")
 public class Servidor {
-
+	private Proceso p1;
+	private Proceso p2;
 	
 	public Servidor(){
 		//Creamos los procesos
-		Proceso p1 = new Proceso("01", 0);
-		Proceso p2 = new Proceso("02", 0); 
+		p1 = new Proceso("01", 0);
+		p2 = new Proceso("02", 0); 
 		//Arrancamos los procesos
 		p1.start();
 		p2.start();
@@ -36,8 +37,10 @@ public class Servidor {
 	@Path("enviarMensaje") //ruta al m�todo
 	public String enviarMensaje(@QueryParam(value="id")String id) //el m�todo debe retornar String
 	{ 
-		//
-		System.out.println("Enviar mensaje:" + " " + id);
+		//Comprobación
+		//System.out.println("Enviar mensaje:" + " " + id);
+		p1.recibirMsg(id);
+		p2.recibirMsg(id);
 		return "MENSAJE ENVIADO";
 	}
 	

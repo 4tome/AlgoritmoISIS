@@ -1,6 +1,8 @@
 package servicios;
 
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -12,6 +14,7 @@ public class Proceso extends Thread {
 	private String id;
 	private int reloj;
 	private int contador = 0;
+	private List<Mensaje> cola = new ArrayList<Mensaje>();
 	
 	//Constructor
 	public Proceso(String id, int time){
@@ -28,20 +31,32 @@ public class Proceso extends Thread {
 		
 	}
 	//M�todos para enviar los diferentes tipos de mensajes
-	public String newMsg(String id)
+	public String newMsg()
 	{
-		//Creamos el identificador del mensaje
+		//Creamos el Mensaje
 		String newId = "P" + id + " " + this.contador;
-		return newId;
+		Mensaje mensaje = new Mensaje(newId, this.reloj);
+		//Creamos el String que se enviará.
+		String msg = mensaje.getId() + ";" + mensaje.getTime();
+		return msg;
 	}
 	
 	//M�todos para recibir los diferentes tipos de mensajes
-	
+	public void recibirMsg(String msg)
+	{
+		//Comprobación
+		//System.out.println("He recibido el mensaje: " + msg);
+		String[] parts = msg.split(";");
+		Mensaje mensaje = new Mensaje(parts[0], Integer.parseInt(parts[1]));
+		cola.add(mensaje);
+		//Comprobación
+		System.out.println("Mensajes: " + cola.size());		
+	}
 	
 	//M�todos para el envio de mensajes (multicast, unicast)
 	public void multicast(){
 		//Creamos el mensaje
-		String msg = newMsg(this.id);
+		String msg = newMsg();
 		//Lanzamos el servicio del dispatcher
 		Client proceso = ClientBuilder.newClient();
 		URI uri = UriBuilder.fromUri("http://localhost:8080/AlgoritmoISIS").build();
@@ -49,6 +64,7 @@ public class Proceso extends Thread {
 		//Llamar al servicio
 		System.out.println(target.path("rest/Servidor/enviarMensaje").queryParam("id", msg).request(MediaType.TEXT_PLAIN).get(String.class));
 	}
+	
 	public void unicast(){
 		
 	}
@@ -56,7 +72,7 @@ public class Proceso extends Thread {
 	//M�todo run
 	public void run(){
 		//prueba de funcionamiento
-		System.out.println("Hola, soy el proceso" + " " + this.id + " " + this.reloj);
+		//System.out.println("Hola, soy el proceso" + " " + this.id);
 		//Mandar 1 mensaje normal
 		this.multicast();
 	}
