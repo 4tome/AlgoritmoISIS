@@ -35,12 +35,10 @@ public class Servidor {
 	@GET //tipo de petici�n HTTP
 	@Produces(MediaType.TEXT_PLAIN) //tipo de texto devuelto
 	@Path("enviarMensaje") //ruta al m�todo
-	public String enviarMensaje(@QueryParam(value="id")String id) //el m�todo debe retornar String
+	public String enviarMensaje(@QueryParam(value="mensaje")String msg) //el m�todo debe retornar String
 	{ 
-		//Comprobación
-		//System.out.println("Enviar mensaje:" + " " + id);
-		p1.recibirMsg(id);
-		p2.recibirMsg(id);
+		p1.recibirMsg(msg);
+		p2.recibirMsg(msg);
 		return "MENSAJE ENVIADO";
 	}
 	

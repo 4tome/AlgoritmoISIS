@@ -13,7 +13,7 @@ import javax.ws.rs.core.UriBuilder;
 public class Proceso extends Thread {
 	private String id;
 	private int reloj;
-	private int contador = 0;
+	private int contador;
 	private List<Mensaje> cola = new ArrayList<Mensaje>();
 	
 	//Constructor
@@ -24,7 +24,7 @@ public class Proceso extends Thread {
 	
 	//M�todos para el incremento del tiempo l�gico (Lamport)
 	public void LC1(){
-		
+		this.reloj += 1;
 	}
 	
 	public void LC2(){
@@ -34,10 +34,9 @@ public class Proceso extends Thread {
 	public String newMsg()
 	{
 		//Creamos el Mensaje
-		String newId = "P" + id + " " + this.contador;
-		Mensaje mensaje = new Mensaje(newId, this.reloj);
+		String newId = "P" + this.id + " " + this.contador;
 		//Creamos el String que se enviará.
-		String msg = mensaje.getId() + ";" + mensaje.getTime();
+		String msg = newId + ";" + this.reloj;
 		return msg;
 	}
 	
@@ -46,27 +45,34 @@ public class Proceso extends Thread {
 	{
 		//Comprobación
 		//System.out.println("He recibido el mensaje: " + msg);
+		LC1();
 		String[] parts = msg.split(";");
 		Mensaje mensaje = new Mensaje(parts[0], Integer.parseInt(parts[1]));
 		cola.add(mensaje);
 		//Comprobación
-		System.out.println("Mensajes: " + cola.size());		
+		System.out.println("Mensajes: " + cola.size());
+		System.out.println("Tiempo Lamport proceso" + this.id + ": " + this.reloj);
+		
 	}
 	
 	//M�todos para el envio de mensajes (multicast, unicast)
 	public void multicast(){
 		//Creamos el mensaje
-		String msg = newMsg();
+		for(contador =0; contador<10; contador++) {
+			String msg = newMsg();
+			this.unicast(msg);
+		}
+		
+	}
+	
+	public void unicast(String msg){
+		
 		//Lanzamos el servicio del dispatcher
 		Client proceso = ClientBuilder.newClient();
 		URI uri = UriBuilder.fromUri("http://localhost:8080/AlgoritmoISIS").build();
 		WebTarget target = proceso.target(uri);
 		//Llamar al servicio
-		System.out.println(target.path("rest/Servidor/enviarMensaje").queryParam("id", msg).request(MediaType.TEXT_PLAIN).get(String.class));
-	}
-	
-	public void unicast(){
-		
+		System.out.println(target.path("rest/Servidor/enviarMensaje").queryParam("mensaje", msg).request(MediaType.TEXT_PLAIN).get(String.class));
 	}
 	
 	//M�todo run
