@@ -13,7 +13,6 @@ import javax.ws.rs.core.UriBuilder;
 
 public class Proceso extends Thread {
 	private String id;
-	private int reloj;
 	private int contador;
 	private List<Mensaje> cola = new ArrayList<Mensaje>();
 	private int Ci, Cj;
@@ -22,11 +21,11 @@ public class Proceso extends Thread {
 	//Constructor
 	public Proceso(String id, int time){
 		this.id = id;
-		this.reloj = time;
+		this.Ci = time;
 		this.semTiempo = new Semaphore(1);
 	}
 	
-	//M�todos para el incremento del tiempo l�gico (Lamport)
+	//Metodos para el incremento del tiempo logico (Lamport)
 	public void LC1(){
 		
 		try {
@@ -38,8 +37,8 @@ public class Proceso extends Thread {
 		      e.printStackTrace();
 		    }
 		
-		//Creo que no har�a falta pasar la variable reloj al proceso
-		this.reloj = Ci;
+		//Creo que no haria falta pasar la variable reloj al proceso
+		//no entiendo lo de los tiempos
 	}
 	
 	public void LC2(){
@@ -57,43 +56,57 @@ public class Proceso extends Thread {
 	    
 		
 	}
-	//M�todos para enviar los diferentes tipos de mensajes
-	public String newMsg()
+	//Metodos para enviar los diferentes tipos de mensajes
+	public String newMsg(int type)
 	{
 		//Creamos el Mensaje
 		String newId = "P" + this.id + " " + this.contador;
 		//Creamos el String que se enviará.
-		String msg = newId + ";" + this.reloj;
+		String msg = newId + ";" + this.Ci + ";" + type;
 		return msg;
 	}
 	
-	//M�todos para recibir los diferentes tipos de mensajes
+	//Metodos para recibir los diferentes tipos de mensajes
 	public void recibirMsg(String msg)
 	{
-		//Comprobación
-		//System.out.println("He recibido el mensaje: " + msg);
-		LC1();
+		//Descomposición del mensaje
 		String[] parts = msg.split(";");
-		Mensaje mensaje = new Mensaje(parts[0], Integer.parseInt(parts[1]));
-		cola.add(mensaje);
-		//Comprobación
-		System.out.println("Mensajes: " + cola.size());
-		System.out.println("Tiempo Lamport proceso" + this.id + ": " + this.reloj);
-		
+		//Comprobar tipo de mensaje
+		if(Integer.parseInt(parts[2]) == 0) {
+			LC1();
+			//Comprobación
+			System.out.println("He recibido un mensaje normal de " + parts[0]);
+			//Mensaje normal
+			Mensaje mensaje = new Mensaje(parts[0], Integer.parseInt(parts[1]), Integer.parseInt(parts[2]), "PROVISIONAL");
+			cola.add(mensaje);
+			//enviar propuesta
+			String propuesta = newMsg(1);
+			//this.unicast(propuesta);
+		}else if(Integer.parseInt(parts[2]) == 1) {
+			//Comprobación
+			System.out.println("He recibido un mensaje de propuesta" );
+		}
 	}
 	
-	//M�todos para el envio de mensajes (multicast, unicast)
+	//Metodos para el envio de mensajes (multicast, unicast)
 	public void multicast(){
 		//Creamos el mensaje
-		for(contador =0; contador<10; contador++) {
-			String msg = newMsg();
+		for(contador =0; contador<1; contador++) {
+			String msg = newMsg(0);
 			this.unicast(msg);
+			//Tiempo de espera
+			try {
+				long time = (long)(Math.random()*(5-2)+2);
+				Thread.sleep(time*100);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 		
 	}
 	
 	public void unicast(String msg){
-		
 		//Lanzamos el servicio del dispatcher
 		Client proceso = ClientBuilder.newClient();
 		URI uri = UriBuilder.fromUri("http://localhost:8080/AlgoritmoISIS").build();
@@ -102,10 +115,8 @@ public class Proceso extends Thread {
 		System.out.println(target.path("rest/Servidor/enviarMensaje").queryParam("mensaje", msg).request(MediaType.TEXT_PLAIN).get(String.class));
 	}
 	
-	//M�todo run
+	//Metodo run
 	public void run(){
-		//prueba de funcionamiento
-		//System.out.println("Hola, soy el proceso" + " " + this.id);
 		//Mandar 1 mensaje normal
 		this.multicast();
 	}
