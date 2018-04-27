@@ -35,10 +35,22 @@ public class Servidor {
 	@GET //tipo de petici�n HTTP
 	@Produces(MediaType.TEXT_PLAIN) //tipo de texto devuelto
 	@Path("enviarMensaje") //ruta al m�todo
-	public String enviarMensaje(@QueryParam(value="mensaje")String msg) //el m�todo debe retornar String
+	public String enviarMensaje(@QueryParam(value="mensaje")String msg,
+								@QueryParam(value="destino")Integer destino) //el m�todo debe retornar String
 	{ 
-		p1.recibirMsg(msg);
-		p2.recibirMsg(msg);
+		
+		if(destino == 0){			
+			p1.recibirMsg(msg);
+			p2.recibirMsg(msg);
+		}
+		if(destino == 1){
+			p1.recibirMsg(msg);
+		}
+		if(destino == 2){
+			p2.recibirMsg(msg);
+		}
+		
+		//System.out.print("El valor del destino es: " + destino);
 		return "MENSAJE ENVIADO";
 	}
 	

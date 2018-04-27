@@ -41,13 +41,13 @@ public class Proceso extends Thread {
 		//no entiendo lo de los tiempos
 	}
 	
-	public void LC2(){
+	public void LC2(int tiempoMensaje){
 		
-		int t = Ci;
+		
 	    
 	    try {
 	      semTiempo.acquire(1);
-	      Cj = Math.max(t, Cj) + 1;
+	      this.Cj = Math.max(tiempoMensaje, this.Cj) + 1;
 	      semTiempo.release(1);
 	    } catch (InterruptedException e) {
 	      // TODO Auto-generated catch block
@@ -75,25 +75,27 @@ public class Proceso extends Thread {
 		if(Integer.parseInt(parts[2]) == 0) {
 			LC1();
 			//Comprobación
-			System.out.println("He recibido un mensaje normal de " + parts[0]);
+			//System.out.println("He recibido un mensaje normal de " + parts[0]);
 			//Mensaje normal
 			Mensaje mensaje = new Mensaje(parts[0], Integer.parseInt(parts[1]), Integer.parseInt(parts[2]), "PROVISIONAL");
 			cola.add(mensaje);
 			//enviar propuesta
+			
 			String propuesta = newMsg(1);
-			//this.unicast(propuesta);
+			this.unicast(propuesta, Integer.parseInt(mensaje.getId().substring(2,3)));
 		}else if(Integer.parseInt(parts[2]) == 1) {
 			//Comprobación
-			System.out.println("He recibido un mensaje de propuesta" );
+			System.out.println("He recibido un mensaje de propuesta: " + parts[0]);
 		}
 	}
+	
 	
 	//Metodos para el envio de mensajes (multicast, unicast)
 	public void multicast(){
 		//Creamos el mensaje
 		for(contador =0; contador<1; contador++) {
 			String msg = newMsg(0);
-			this.unicast(msg);
+			this.unicast(msg, 0);
 			//Tiempo de espera
 			try {
 				long time = (long)(Math.random()*(5-2)+2);
@@ -106,13 +108,14 @@ public class Proceso extends Thread {
 		
 	}
 	
-	public void unicast(String msg){
+	public void unicast(String msg, int destino){
+		
 		//Lanzamos el servicio del dispatcher
 		Client proceso = ClientBuilder.newClient();
 		URI uri = UriBuilder.fromUri("http://localhost:8080/AlgoritmoISIS").build();
 		WebTarget target = proceso.target(uri);
 		//Llamar al servicio
-		System.out.println(target.path("rest/Servidor/enviarMensaje").queryParam("mensaje", msg).request(MediaType.TEXT_PLAIN).get(String.class));
+		System.out.println(target.path("rest/Servidor/enviarMensaje").queryParam("mensaje", msg).queryParam("destino", destino).request(MediaType.TEXT_PLAIN).get(String.class));
 	}
 	
 	//Metodo run
