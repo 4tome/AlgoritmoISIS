@@ -15,22 +15,26 @@ public class Proceso extends Thread {
 	private String id;
 	private int contador;
 	private List<Mensaje> cola = new ArrayList<Mensaje>();
-	private int Ci, Cj;
+	//private int Ci, Cj;
+	//usare orden de momento, porque con Ci y Cj no me aclaro.
+	private int orden;
 	private Semaphore semTiempo;
+	private Mensaje mensaje;//mensaje que envia el proceso
+	private int numProcess;
 	
 	//Constructor
-	public Proceso(String id, int time){
+	public Proceso(String id, int time, int numProcess){
 		this.id = id;
-		this.Ci = time;
+		this.orden = time;
 		this.semTiempo = new Semaphore(1);
+		this.numProcess = numProcess - 1;
 	}
 	
 	//Metodos para el incremento del tiempo logico (Lamport)
-	public void LC1(){
-		
+	public void LC1(int tLamport){
 		try {
 		      semTiempo.acquire(1);
-		      Ci = Ci + 1;
+		      tLamport += 1;
 		      semTiempo.release(1);
 		    } catch (InterruptedException e) {
 		      // TODO Auto-generated catch block
@@ -41,13 +45,10 @@ public class Proceso extends Thread {
 		//no entiendo lo de los tiempos
 	}
 	
-	public void LC2(int tiempoMensaje){
-		
-		
-	    
+	public void LC2(int tLamport, int tLamportNew){
 	    try {
 	      semTiempo.acquire(1);
-	      this.Cj = Math.max(tiempoMensaje, this.Cj) + 1;
+	      tLamport = Math.max(tLamport, tLamportNew) + 1;
 	      semTiempo.release(1);
 	    } catch (InterruptedException e) {
 	      // TODO Auto-generated catch block
@@ -57,13 +58,26 @@ public class Proceso extends Thread {
 		
 	}
 	//Metodos para enviar los diferentes tipos de mensajes
-	public String newMsg(int type)
+	public String mensaje(int orden)
 	{
 		//Creamos el Mensaje
 		String newId = "P" + this.id + " " + this.contador;
 		//Creamos el String que se enviará.
-		String msg = newId + ";" + this.Ci + ";" + type;
-		return msg;
+		String Mensaje = newId + ";" + this.orden + ";" + " " + ";";
+		mensaje = new Mensaje(newId, this.orden, "", 0);
+		return Mensaje;
+	}
+	
+	public String propuesta (String id, int orden) {
+		//Creacion del String
+		String Propuesta = id + ";" + orden + ";" + "PROVISIONAL" + ";";
+		return Propuesta;
+	}
+	
+	public String acuerdo(String id, int orden) {
+		//Creacion del String
+		String Propuesta = id + ";" + orden + ";" + "DEFINITIVO" + ";";
+		return Propuesta;
 	}
 	
 	//Metodos para recibir los diferentes tipos de mensajes
@@ -72,21 +86,25 @@ public class Proceso extends Thread {
 		//Descomposición del mensaje
 		String[] parts = msg.split(";");
 		//Comprobar tipo de mensaje
-		if(Integer.parseInt(parts[2]) == 0) {
-			LC1();
-			//Comprobación
-			//System.out.println("He recibido un mensaje normal de " + parts[0]);
-			//Mensaje normal
-			Mensaje mensaje = new Mensaje(parts[0], Integer.parseInt(parts[1]), Integer.parseInt(parts[2]), "PROVISIONAL");
-			cola.add(mensaje);
-			//enviar propuesta
+		if(parts[2] != null && parts[2].equals("PROVISIONAL")) {
+			//Al recibir un mensaje de propuesta
+			mensaje.setOrden(Math.max(mensaje.getOrden(), Integer.parseInt(parts[1])));
+			LC2(this.orden, Integer.parseInt(parts[1]));
+			mensaje.setNumP(mensaje.getNumP() + 1);
+			if (mensaje.getNumP() == this.numProcess) {
+				//Enviar mensaje de acuerdo.
+				mensaje.setState("DEFINITIVO");
+			}
 			
-			String propuesta = newMsg(1);
-			this.unicast(propuesta, Integer.parseInt(mensaje.getId().substring(2,3)));
-		}else if(Integer.parseInt(parts[2]) == 1) {
-			//Comprobación
-			System.out.println("He recibido un mensaje de propuesta: " + parts[0]);
+		}else {
+			LC1(this.orden);
+			cola.add(new Mensaje(parts[0], Integer.parseInt(parts[1]), "PROVISIONAL", 0));
+			System.out.println("mensaje recibido");
+			//Enviar propuesta
+			this.unicast(propuesta(parts[0], this.orden), Integer.parseInt(mensaje.getId().substring(3,4)));
+			
 		}
+		
 	}
 	
 	
@@ -94,8 +112,7 @@ public class Proceso extends Thread {
 	public void multicast(){
 		//Creamos el mensaje
 		for(contador =0; contador<1; contador++) {
-			String msg = newMsg(0);
-			this.unicast(msg, 0);
+			this.unicast(mensaje(this.orden), contador);
 			//Tiempo de espera
 			try {
 				long time = (long)(Math.random()*(5-2)+2);
@@ -109,7 +126,6 @@ public class Proceso extends Thread {
 	}
 	
 	public void unicast(String msg, int destino){
-		
 		//Lanzamos el servicio del dispatcher
 		Client proceso = ClientBuilder.newClient();
 		URI uri = UriBuilder.fromUri("http://localhost:8080/AlgoritmoISIS").build();

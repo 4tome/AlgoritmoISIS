@@ -2,26 +2,20 @@ package servicios;
 
 public class Mensaje {
 	private String id;
-	private int time;
-	private int type;
+	private int orden;
 	private String state;
+	private int numP;
+	private String content;
 	
 	//Constructor
-	public Mensaje(String id, int time, int type, String state) {
+	public Mensaje(String id, int time, String state, int numProcess) {
 		this.setId(id);
-		this.setTime(time);
-		this.setType(type);
+		this.setOrden(time);
 		this.setState(state);
+		this.setNumP(numProcess);
 	}
 
 	//Métodos Getter y Setter
-	public int getTime() {
-		return time;
-	}
-
-	public void setTime(int time) {
-		this.time = time;
-	}
 
 	public String getId() {
 		return id;
@@ -30,21 +24,36 @@ public class Mensaje {
 	public void setId(String id) {
 		this.id = id;
 	}
-
-	public int getType() {
-		return type;
-	}
-
-	public void setType(int type) {
-		this.type = type;
-	}
-
 	public String getState() {
 		return state;
 	}
 
 	public void setState(String state) {
 		this.state = state;
+	}
+
+	public String getContent() {
+		return content;
+	}
+
+	public void setContent(String content) {
+		this.content = content;
+	}
+
+	public int getOrden() {
+		return orden;
+	}
+
+	public void setOrden(int orden) {
+		this.orden = orden;
+	}
+
+	public int getNumP() {
+		return numP;
+	}
+
+	public void setNumP(int numP) {
+		this.numP = numP;
 	}
 	
 }

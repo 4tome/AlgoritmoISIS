@@ -15,8 +15,8 @@ public class Servidor {
 	
 	public Servidor(){
 		//Creamos los procesos
-		p1 = new Proceso("01", 0);
-		p2 = new Proceso("02", 0); 
+		p1 = new Proceso("01", 0, 2);
+		p2 = new Proceso("02", 0, 2); 
 		//Arrancamos los procesos
 		p1.start();
 		p2.start();
@@ -51,12 +51,6 @@ public class Servidor {
 		}
 		
 		//System.out.print("El valor del destino es: " + destino);
-		return "MENSAJE ENVIADO";
+		return "MENSAJE " + msg + ", destino ("+ destino +  ") ENVIADO";
 	}
-	
-
-	
-	//
-	
-	
 }
