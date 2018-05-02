@@ -85,8 +85,9 @@ public class Proceso extends Thread {
 	{
 		//Descomposición del mensaje
 		String[] parts = msg.split(";");
+		String tipo = "PROVISIONAL";
 		//Comprobar tipo de mensaje
-		if(parts[2] != null && parts[2].equals("PROVISIONAL")) {
+		if(parts[2] != null && parts[2].equals(tipo)) {
 			//Al recibir un mensaje de propuesta
 			mensaje.setOrden(Math.max(mensaje.getOrden(), Integer.parseInt(parts[1])));
 			LC2(this.orden, Integer.parseInt(parts[1]));
@@ -94,15 +95,15 @@ public class Proceso extends Thread {
 			if (mensaje.getNumP() == this.numProcess) {
 				//Enviar mensaje de acuerdo.
 				mensaje.setState("DEFINITIVO");
+				this.unicast(acuerdo(mensaje.getId(),  mensaje.getOrden()), 0);
 			}
 			
-		}else {
+		}else{
 			LC1(this.orden);
 			cola.add(new Mensaje(parts[0], Integer.parseInt(parts[1]), "PROVISIONAL", 0));
-			System.out.println("mensaje recibido");
+			//System.out.println("mensaje recibido");
 			//Enviar propuesta
-			this.unicast(propuesta(parts[0], this.orden), Integer.parseInt(mensaje.getId().substring(3,4)));
-			
+			this.unicast(propuesta(parts[0], this.orden), Integer.parseInt(mensaje.getId().substring(2,3)));
 		}
 		
 	}
@@ -112,7 +113,7 @@ public class Proceso extends Thread {
 	public void multicast(){
 		//Creamos el mensaje
 		for(contador =0; contador<1; contador++) {
-			this.unicast(mensaje(this.orden), contador);
+			this.unicast(mensaje(this.orden), 0);
 			//Tiempo de espera
 			try {
 				long time = (long)(Math.random()*(5-2)+2);
