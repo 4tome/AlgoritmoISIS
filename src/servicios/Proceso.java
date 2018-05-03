@@ -100,7 +100,19 @@ public class Proceso extends Thread {
 			    mensaje.setState("DEFINITIVO");
 			    
 		    }
-		    cola.sort(null); 
+		    cola.sort(null);
+		    //Estraer los mensajes que ya estend en definitivo y eliminarlos de la cola, tras escribirlo en un log
+		    int flag = 0;
+		    mensaje = cola.get(0);
+		    while (flag == 0 && mensaje.getState().equals("DEFINITIVO")) {
+		    	//Escribir mensaje en fichero
+		    	cola.remove(0);
+		    	if(cola.isEmpty()) {
+		    		flag = 1;
+		    	}else {
+		    		mensaje = cola.get(0);
+		    	}
+		    }
 	    }else{
 			LC1();
 			cola.add(new Mensaje(parts[0], Integer.parseInt(parts[1]), "PROVISIONAL", 0));
