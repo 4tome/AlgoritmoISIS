@@ -1,6 +1,6 @@
 package servicios;
 
-public class Mensaje {
+public class Mensaje implements Comparable<Mensaje> {
 	private String id;
 	private int orden;
 	private String state;
@@ -15,8 +15,25 @@ public class Mensaje {
 		this.setNumP(numProcess);
 	}
 
+	@Override
+	public int compareTo(Mensaje m) {
+		if (orden < m.orden) {
+			return -1;
+		}
+		if (orden > m.orden) {
+			return 1;
+		}
+		return 0;
+	}
+	
+	//Métodos de comprobación
+	public String imprimir()
+	{
+		String mensaje = this.id + "-" + this.orden + "-" + this.state + "-" + this.numP;
+		return mensaje;
+	}
+	
 	//Métodos Getter y Setter
-
 	public String getId() {
 		return id;
 	}

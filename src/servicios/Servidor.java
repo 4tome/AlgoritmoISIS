@@ -32,6 +32,7 @@ public class Servidor {
 		return "Procesos creados satisfactoriamente";
 	}
 	
+	
 	@GET //tipo de petici�n HTTP
 	@Produces(MediaType.TEXT_PLAIN) //tipo de texto devuelto
 	@Path("enviarMensaje") //ruta al m�todo
@@ -52,5 +53,29 @@ public class Servidor {
 		
 		//System.out.print("El valor del destino es: " + destino);
 		return "MENSAJE " + msg + ", destino ("+ destino +  ") ENVIADO";
+	}
+	
+	//Servicios de comprobación
+
+	@Path("compruebaP1")
+	@GET 
+	@Produces(MediaType.TEXT_PLAIN)
+	public String compruebap1()
+	{
+		System.out.println("------------------------------------Cola p1----------------------------");
+		p1.servicioImprimirCola();
+		//Servicio para arrancar los procesos.
+		return "comprobacion de la cola de p1";
+	}
+	
+	@Path("compruebaP2")
+	@GET 
+	@Produces(MediaType.TEXT_PLAIN)
+	public String compruebap2()
+	{
+		System.out.println("------------------------------------Cola p2----------------------------");
+		p2.servicioImprimirCola();
+		//Servicio para arrancar los procesos.
+		return "comprobacion de la cola de p2";
 	}
 }
