@@ -39,7 +39,6 @@ public class Servidor {
 	public String enviarMensaje(@QueryParam(value="mensaje")String msg,
 								@QueryParam(value="destino")Integer destino) //el m�todo debe retornar String
 	{ 
-		
 		if(destino == 0){			
 			p1.recibirMsg(msg);
 			p2.recibirMsg(msg);
