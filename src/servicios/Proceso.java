@@ -15,14 +15,16 @@ import javax.ws.rs.core.UriBuilder;
 public class Proceso extends Thread {
 	private String id;
 	private int contador;
-	private List<Mensaje> cola = new ArrayList<Mensaje>();
+	private ArrayList<Mensaje> cola = new ArrayList<Mensaje>();
+	private ArrayList<Mensaje> listaPropuestas = new ArrayList<Mensaje>();
 	//private int Ci, Cj;
 	private int orden;
 	private Semaphore semTiempo;
 	private Semaphore sem_Mensajes;
-	private Semaphore sem_Cola;
+	//private Semaphore sem_Cola;
+	private Semaphore sem_Propuestas;
 	private Mensaje Mensaje;//mensaje que envia el proceso
-	//private int numProcess;
+	private int numPropuestas = 2;
 	
 	//Constructor
 	public Proceso(String id, int time, int numProcess){
@@ -30,8 +32,9 @@ public class Proceso extends Thread {
 		this.orden = time;
 		this.semTiempo = new Semaphore(1);
 		this.sem_Mensajes = new Semaphore(1);
-		this.sem_Cola = new Semaphore(1);
+		//this.sem_Cola = new Semaphore(1);
 		//this.numProcess = numProcess;
+		this.sem_Propuestas = new Semaphore(1);
 	}
 	
 	//Metodos para el incremento del tiempo logico (Lamport)
@@ -64,6 +67,16 @@ public class Proceso extends Thread {
 	{
 		String newId = "P" + this.id + " " + this.contador;
 		String nuevo = newId + ";" + this.orden + ";" + " " + ";";
+		Mensaje = new Mensaje(newId, this.orden, "PROVISIONAL", 0);
+		try {
+			sem_Propuestas.acquire(1);
+			listaPropuestas.add(Mensaje);
+			sem_Propuestas.release(1);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 		return nuevo;
 	}
 	
@@ -80,95 +93,143 @@ public class Proceso extends Thread {
 	//Metodos para recibir los diferentes tipos de mensajes
 	public void recibirMsg(String msg)
 	{
-		try {
-			String[] parts = msg.split(";");
-			if(parts[2] != null && parts[2].equals("PROVISIONAL")) {
-				//Al recibir un mensaje de propuesta
-				LC2(Integer.parseInt(parts[1]));
-				int i = busquedaMensaje(cola, parts[0]);
-				if (i!=100) {
-					//System.out.print("El mensaje original se encuentra en la cola " + parts[0] + " " + this.id);
-				}else {
-					System.out.print("El mensaje original no se encuentra en la cola " + parts[0] + ", " + this.id + " " + i + "\r");
-					this.servicioImprimirCola();
-				}
-				/*if (i != 100) {
-					Mensaje.setOrden(Math.max(Mensaje.getOrden(), Integer.parseInt(parts[1])));
-					Mensaje.setNumP(Mensaje.getNumP() + 1);
-					//System.out.println("Mensaje: " + mensaje.getNumP());
-					if (Mensaje.getNumP() == this.numProcess) {
-						System.out.println("Mensajes propuesta recibidos " + this.id + ": " + Mensaje.getNumP());
-						Mensaje.setState("DEFINITIVO");
-						this.unicast(acuerdo(Mensaje.getId(),  Mensaje.getOrden()), 0);
-					}
-					
-				}else {
-				  	System.out.println("ERROR: No se ha encontrado el mensaje solicitado, " + parts[0] + " de P"  + this.id + " " + i);
-			    	this.servicioImprimirCola();
-				}*/
-			}else if(parts[2] != null && parts[2].equals("DEFINITIVO")){
-				//Buscamos el mensaje en nuestra cola
-			    /*int i = busquedaMensaje(cola, parts[0]);
-			    if (i == 100) {
-			    	System.out.println("ERROR: No se ha encontrado el mensaje solicitado, " + parts[0] + " de P"  + this.id);
-			    	this.servicioImprimirCola();
-			    }else {
-			    	//sem_Mensajes.acquire(1);
-			    	Mensaje mensaje = cola.get(i);
-				    mensaje.setOrden(Integer.parseInt(parts[1]));
-				    mensaje.setState("DEFINITIVO");
-				    //sem_Mensajes.release(1);
-				    LC2(Integer.parseInt(parts[1]));
-			    }
-			    //sem_Mensajes.acquire(1);
-			    cola.sort(null);*/
-			    //sem_Mensajes.release(1);
-			    //Estraer los mensajes que ya estend en definitivo y eliminarlos de la cola, tras escribirlo en un log
-			    /*int flag = 0;
-			    mensaje = cola.get(0);
-			    while (flag == 0 && mensaje.getState().equals("DEFINITIVO")) {
-			    	//Escribir mensaje en fichero
-			    	cola.remove(0);
-			    	if(cola.isEmpty()) {
-			    		flag = 1;
-			    	}else {
-			    		mensaje = cola.get(0);
-			    	}
-			    }*/
-		    }else{
-				LC1();
-				sem_Cola.acquire(1);
-				Mensaje = new Mensaje(parts[0], Integer.parseInt(parts[1]), "PROVISIONAL", 0);
-				cola.add(Mensaje);
-				sem_Cola.release(1);
-				sem_Mensajes.acquire(1);
-				this.unicast(propuesta(parts[0], this.orden), Integer.parseInt(parts[0].substring(2,3)));
-				sem_Mensajes.release(1);
-				//System.out.println("Enviar mensaje " + parts[0] + " desde " + this.id + " a " + parts[0].substring(2,3));
-				
+		
+		/*if(parts[2] != null && parts[2].equals("PROVISIONAL")) {
+			//Al recibir un mensaje de propuesta
+			
+			int i = busquedaMensaje(cola, parts[0]);
+			if (i != -1) {
+				//System.out.print("El mensaje original se encuentra en la cola " + parts[0] + " " + this.id);
+			}else {
+				System.out.print("El mensaje original no se encuentra en la cola " + parts[0] + ", " + this.id + " " + i + "\r");
 			}
-		}catch (InterruptedException e) {
-		      // TODO Auto-generated catch block
-		      e.printStackTrace();
-		}	
+			/*if (i != 100) {
+				Mensaje.setOrden(Math.max(Mensaje.getOrden(), Integer.parseInt(parts[1])));
+				Mensaje.setNumP(Mensaje.getNumP() + 1);
+				//System.out.println("Mensaje: " + mensaje.getNumP());
+				if (Mensaje.getNumP() == this.numProcess) {
+					System.out.println("Mensajes propuesta recibidos " + this.id + ": " + Mensaje.getNumP());
+					Mensaje.setState("DEFINITIVO");
+					this.unicast(acuerdo(Mensaje.getId(),  Mensaje.getOrden()), 0);
+				}
+				
+			}else {
+			  	System.out.println("ERROR: No se ha encontrado el mensaje solicitado, " + parts[0] + " de P"  + this.id + " " + i);
+		    	this.servicioImprimirCola();
+			}*/
+		//}else if(parts[2] != null && parts[2].equals("DEFINITIVO")){
+			//Buscamos el mensaje en nuestra cola
+		    /*int i = busquedaMensaje(cola, parts[0]);
+		    if (i == 100) {
+		    	System.out.println("ERROR: No se ha encontrado el mensaje solicitado, " + parts[0] + " de P"  + this.id);
+		    	this.servicioImprimirCola();
+		    }else {
+		    	//sem_Mensajes.acquire(1);
+		    	Mensaje mensaje = cola.get(i);
+			    mensaje.setOrden(Integer.parseInt(parts[1]));
+			    mensaje.setState("DEFINITIVO");
+			    //sem_Mensajes.release(1);
+			    LC2(Integer.parseInt(parts[1]));
+		    }
+		    //sem_Mensajes.acquire(1);
+		    cola.sort(null);*/
+		    //sem_Mensajes.release(1);
+		    //Estraer los mensajes que ya estend en definitivo y eliminarlos de la cola, tras escribirlo en un log
+		    /*int flag = 0;
+		    mensaje = cola.get(0);
+		    while (flag == 0 && mensaje.getState().equals("DEFINITIVO")) {
+		    	//Escribir mensaje en fichero
+		    	cola.remove(0);
+		    	if(cola.isEmpty()) {
+		    		flag = 1;
+		    	}else {
+		    		mensaje = cola.get(0);
+		    	}
+		    }*/
 	}
 	
-	public int busquedaMensaje(List<Mensaje> cola, String id) {
-		int index = 100;
-		//try {
-			//sem_Mensajes.acquire(1);
-			for (int i=0; i<cola.size(); i++) {
-				Mensaje mensaje = cola.get(i);
-				if(mensaje.getId().equals(id)) {
-					index = i;
-				}
-			}
+	public void recibirMensaje(String msg) {
+		LC1();
+		String[] parts = msg.split(";");
+		try {
+			sem_Mensajes.acquire(1);
+			Mensaje = new Mensaje(parts[0], Integer.parseInt(parts[1]), "PROVISIONAL", 0);
+			cola.add(Mensaje);
+			this.unicast(propuesta(parts[0], this.orden), Integer.parseInt(parts[0].substring(2,3)));
 			sem_Mensajes.release(1);
-		/*} catch (InterruptedException e) {
+		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}*/
-		return index;
+		}
+	}
+	
+	public void recibirAcuerdo(String msg) {
+		String[] parts = msg.split(";");
+		LC2(Integer.parseInt(parts[1]));
+		/*try {
+			sem_Mensajes.acquire(1);*/
+			Mensaje = busquedaMensaje(cola, parts[0]);
+			if(Mensaje == null) {
+				System.out.println("ERROR: No se ha encontrado un mensaje ");
+			}else {
+				System.out.println("Mensaje definitivo recibido " + this.id);
+				Mensaje.setOrden(Integer.parseInt(parts[1]));
+			    Mensaje.setState("DEFINITIVO");
+			}
+			Mensaje = cola.get(0);
+			int flag = 0;
+		    while (flag == 0 && Mensaje.getState().equals("DEFINITIVO")) {
+		    	//Escribir mensaje en fichero
+		    	cola.remove(0);
+		    	if(cola.isEmpty()) {
+		    		flag = 1;
+		    	}else {
+		    		Mensaje = cola.get(0);
+		    	}
+		    }
+		/*	sem_Mensajes.release(1);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}*/		
+	}
+	
+	public void recibirPropuesta (String msg) {
+		String[] parts = msg.split(";");
+		LC2(Integer.parseInt(parts[1]));
+		//Busqueda del mensaje enviado
+		try {
+			sem_Propuestas.acquire(1);
+			Mensaje = busquedaMensaje(listaPropuestas, parts[0]);
+			if(Mensaje == null) {
+				System.out.println("ERROR: No se ha encontrado un mensaje ");
+			}else {
+				Mensaje.setNumP(Mensaje.getNumP() + 1);
+				//System.out.println("Mensaje " + Mensaje.getId() + " ha recibido " + Mensaje.getNumP() + " propuesta");
+				if(Mensaje.getNumP() == numPropuestas) {
+					//System.out.println("He recibido todas las propuestas del mensaje " + Mensaje.getId());
+					//Enviar Definitivo
+					this.unicast(acuerdo(Mensaje.getId(),  Mensaje.getOrden()), 0);
+				}
+				sem_Propuestas.release(1);
+			}
+			
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+	}
+	
+	public Mensaje busquedaMensaje(ArrayList<Mensaje> cola, String id) {
+		for(int i = 0; i<cola.size(); i++) {	
+			Mensaje mensaje = cola.get(i);
+			if (mensaje.getId().equals(id)) {
+				//sem_Mensajes.release(1);
+				return mensaje;
+			}
+		}
+		return null;
 	}
 	
 	//Metodos para el envio de mensajes (multicast, unicast)
@@ -187,7 +248,7 @@ public class Proceso extends Thread {
 		URI uri = UriBuilder.fromUri("http://localhost:8080/AlgoritmoISIS").build();
 		WebTarget target = proceso.target(uri);
 		//Llamar al servicio
-		System.out.println(target.path("rest/Servidor/enviarMensaje").queryParam("mensaje", msg).queryParam("destino", destino).request(MediaType.TEXT_PLAIN).get(String.class));
+		System.out.println(target.path("rest/Servidor/enviarPropuesta").queryParam("mensaje", msg).queryParam("destino", destino).request(MediaType.TEXT_PLAIN).get(String.class));
 	}
 	
 	//Metodo run
@@ -195,9 +256,7 @@ public class Proceso extends Thread {
 		//bucle de envio de mensajes
 		for(contador =0; contador<1; contador++) {
 			try {
-				//sem_Mensajes.acquire(1);
 				this.multicast(mensaje(this.orden));
-				//sem_Mensajes.release(1);
 				long time = (long)(Math.random()*(5-2)+2);
 				Thread.sleep(time*100);
 			} catch (InterruptedException e) {

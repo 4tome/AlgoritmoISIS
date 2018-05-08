@@ -39,19 +39,29 @@ public class Servidor {
 	public String enviarMensaje(@QueryParam(value="mensaje")String msg,
 								@QueryParam(value="destino")Integer destino) //el m�todo debe retornar String
 	{ 
-		if(destino == 0){			
-			p1.recibirMsg(msg);
-			p2.recibirMsg(msg);
-		}
-		if(destino == 1){
-			p1.recibirMsg(msg);
-		}
-		if(destino == 2){
-			p2.recibirMsg(msg);
+		p1.recibirMensaje(msg);
+		p2.recibirMensaje(msg);
+		return "MENSAJE " + msg + " ENVIADO";
+	}
+	
+	@GET //tipo de petici�n HTTP
+	@Produces(MediaType.TEXT_PLAIN) //tipo de texto devuelto
+	@Path("enviarPropuesta") //ruta al m�todo
+	public String enviarPropuesta(@QueryParam(value="mensaje")String msg,
+								@QueryParam(value="destino")Integer destino) //el m�todo debe retornar String
+	{ 
+		if (destino == 1) {
+			p1.recibirPropuesta(msg);
+			return "PROPUESTA " + msg + " ENVIADO";
+		}else if (destino == 2) {
+			p2.recibirPropuesta(msg);
+			return "PROPUESTA " + msg + " ENVIADO";
+		}else {
+			p1.recibirAcuerdo(msg);
+			p2.recibirAcuerdo(msg);
+			return "Definitivo " + msg + " ENVIADO";
 		}
 		
-		//System.out.print("El valor del destino es: " + destino);
-		return "MENSAJE " + msg + ", destino ("+ destino +  ") ENVIADO";
 	}
 	
 	//Servicios de comprobación
