@@ -12,11 +12,12 @@ import javax.ws.rs.core.MediaType;
 public class Servidor {
 	private Proceso p1;
 	private Proceso p2;
-	
+	private String[][] arrayProcesos = {{"P01","localhost"},{"P02","localhost"}};
+	private String[] arrayDispatcher = {"localhost"};
 	public Servidor(){
 		//Creamos los procesos
-		p1 = new Proceso("01", 0, 2);
-		p2 = new Proceso("02", 0, 2); 
+		p1 = new Proceso("01", 0, 2, arrayProcesos, arrayDispatcher);
+		p2 = new Proceso("02", 0, 2, arrayProcesos, arrayDispatcher); 
 		//Arrancamos los procesos
 		p1.start();
 		p2.start();
@@ -39,29 +40,31 @@ public class Servidor {
 	public String enviarMensaje(@QueryParam(value="mensaje")String msg,
 								@QueryParam(value="destino")Integer destino) //el m�todo debe retornar String
 	{ 
-		p1.recibirMensaje(msg);
-		p2.recibirMensaje(msg);
-		return "MENSAJE " + msg + " ENVIADO";
+		if (destino == 1) {
+			p1.recibirAcuerdo(msg);
+			p2.recibirAcuerdo(msg);
+			return "DEFINITIVO " + msg + " ENVIADO";
+		}else {
+			p1.recibirMensaje(msg);
+			p2.recibirMensaje(msg);
+			return "MENSAJE " + msg + " ENVIADO";
+		}
+		
 	}
 	
 	@GET //tipo de petici�n HTTP
 	@Produces(MediaType.TEXT_PLAIN) //tipo de texto devuelto
 	@Path("enviarPropuesta") //ruta al m�todo
 	public String enviarPropuesta(@QueryParam(value="mensaje")String msg,
-								@QueryParam(value="destino")Integer destino) //el m�todo debe retornar String
+								@QueryParam(value="destino")String destino) //el m�todo debe retornar String
 	{ 
-		if (destino == 1) {
+		if (destino.equals("P01")) {
 			p1.recibirPropuesta(msg);
 			return "PROPUESTA " + msg + " ENVIADO";
-		}else if (destino == 2) {
+		}else {
 			p2.recibirPropuesta(msg);
 			return "PROPUESTA " + msg + " ENVIADO";
-		}else {
-			p1.recibirAcuerdo(msg);
-			p2.recibirAcuerdo(msg);
-			return "Definitivo " + msg + " ENVIADO";
 		}
-		
 	}
 	
 	//Servicios de comprobación

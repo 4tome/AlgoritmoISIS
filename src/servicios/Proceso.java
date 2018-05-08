@@ -21,30 +21,33 @@ public class Proceso extends Thread {
 	private int contador;
 	private ArrayList<Mensaje> cola = new ArrayList<Mensaje>();
 	private ArrayList<Mensaje> listaPropuestas = new ArrayList<Mensaje>();
-	//private int Ci, Cj;
 	private int orden;
 	private Semaphore semTiempo;
 	private Semaphore sem_Mensajes;
 	private Semaphore sem_Fichero;
 	private Semaphore sem_Propuestas;
 	private Mensaje Mensaje;//mensaje que envia el proceso
-	private int numPropuestas = 2;
+	private int numProcesos;
 	private String rutaLog;
+	private String[][] arrayProcesos;
+	private String[] arrayDispatcher;
 	
 	//Constructor
-	public Proceso(String id, int time, int numProcess){
+	public Proceso(String id, int time, int numProcess, String[][] arrayProcesos, String[] arrayDispatcher){
 		this.id = id;
 		this.orden = time;
 		this.semTiempo = new Semaphore(1);
 		this.sem_Mensajes = new Semaphore(1);
 		this.sem_Fichero = new Semaphore(1);
-		//this.numProcess = numProcess;
+		this.numProcesos = numProcess;
 		this.sem_Propuestas = new Semaphore(1);
-		this.rutaLog = "/home/amateos/Documentos/logs/";
+		this.arrayProcesos = arrayProcesos;
+		this.arrayDispatcher = arrayDispatcher;
+		this.rutaLog = System.getProperty("user.home");
 		
 		try {
 			sem_Fichero.acquire(1);
-			File fichero = new File(this.rutaLog + "proceso" + this.id + ".log");
+			File fichero = new File(this.rutaLog + "/proceso" + this.id + ".log");
 			if(fichero.exists()) {
 				fichero.delete();
 			}else {
@@ -125,7 +128,7 @@ public class Proceso extends Thread {
 			Mensaje = new Mensaje(parts[0], Integer.parseInt(parts[1]), "PROVISIONAL", 0);
 			cola.add(Mensaje);
 			sem_Mensajes.release(1);
-			this.unicast(propuesta(parts[0], this.orden), Integer.parseInt(parts[0].substring(2,3)));
+			this.unicast(propuesta(parts[0], this.orden), parts[0].substring(0,3));
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -140,7 +143,7 @@ public class Proceso extends Thread {
 			Mensaje = busquedaMensaje(cola, parts[0]);
 			//sem_Mensajes.release(1);
 			if(Mensaje == null) {
-				System.out.println("ERROR: No se ha encontrado un mensaje ");
+				System.out.println("ERROR: No se ha encontrado el mensaje de la cola ");
 			}else {
 				//System.out.println("Mensaje definitivo recibido " + this.id);
 				//sem_Mensajes.acquire(1);
@@ -154,7 +157,7 @@ public class Proceso extends Thread {
 			    	FileWriter f = null;
 			        PrintWriter pw = null;
 			    	try {
-						f = new FileWriter(this.rutaLog + "proceso" + this.id + ".log", true);
+						f = new FileWriter(this.rutaLog + "/proceso" + this.id + ".log", true);
 						sem_Fichero.acquire(1);
 						pw = new PrintWriter(f);
 						pw.println(Mensaje.getId() + " " + Mensaje.getOrden() + " " + Mensaje.getState());
@@ -197,15 +200,15 @@ public class Proceso extends Thread {
 			sem_Propuestas.acquire(1);
 			Mensaje = busquedaMensaje(listaPropuestas, parts[0]);
 			if(Mensaje == null) {
-				System.out.println("ERROR: No se ha encontrado un mensaje ");
+				System.out.println("ERROR: No se ha encontrado el mensaje de propuesta");
 			}else {
 				Mensaje.setOrden(Math.max(Mensaje.getOrden(), Integer.parseInt(parts[1])));
 				Mensaje.setNumP(Mensaje.getNumP() + 1);
 				//System.out.println("Mensaje " + Mensaje.getId() + " ha recibido " + Mensaje.getNumP() + " propuesta");
-				if(Mensaje.getNumP() == numPropuestas) {
+				if(Mensaje.getNumP() == numProcesos) {
 					//System.out.println("He recibido todas las propuestas del mensaje " + Mensaje.getId());
 					//Enviar Definitivo
-					this.unicast(acuerdo(Mensaje.getId(),  Mensaje.getOrden()), 0);
+					this.multicast(acuerdo(Mensaje.getId(),  Mensaje.getOrden()), 1);
 				}
 				sem_Propuestas.release(1);
 			}
@@ -228,30 +231,35 @@ public class Proceso extends Thread {
 	}
 	
 	//Metodos para el envio de mensajes (multicast, unicast)
-	public void multicast(String mensaje){
+	public void multicast(String mensaje, int destino){
 		Client proceso = ClientBuilder.newClient();
-		URI uri = UriBuilder.fromUri("http://localhost:8080/AlgoritmoISIS").build();
-		WebTarget target = proceso.target(uri);
-		//Llamar al servicio
-		System.out.println(target.path("rest/Servidor/enviarMensaje").queryParam("mensaje", mensaje).queryParam("destino", 0).request(MediaType.TEXT_PLAIN).get(String.class));
-		
+		for(int i=0; i<arrayDispatcher.length; i++) {
+			URI uri = UriBuilder.fromUri("http://" + arrayDispatcher[i] + ":8080/AlgoritmoISIS").build();
+			WebTarget target = proceso.target(uri);
+			//Llamar al servicio
+			System.out.println(target.path("rest/Servidor/enviarMensaje").queryParam("mensaje", mensaje).queryParam("destino", destino).request(MediaType.TEXT_PLAIN).get(String.class));
+		}
 	}
 	
-	public void unicast(String msg, int destino){
+	public void unicast(String msg, String p){
 		//Lanzamos el servicio del dispatcher
 		Client proceso = ClientBuilder.newClient();
-		URI uri = UriBuilder.fromUri("http://localhost:8080/AlgoritmoISIS").build();
-		WebTarget target = proceso.target(uri);
-		//Llamar al servicio
-		System.out.println(target.path("rest/Servidor/enviarPropuesta").queryParam("mensaje", msg).queryParam("destino", destino).request(MediaType.TEXT_PLAIN).get(String.class));
+		for(int i=0; i<arrayProcesos.length; i++) {
+			if (arrayProcesos[i][0].equals(p)) {
+				URI uri = UriBuilder.fromUri("http://" + arrayProcesos[i][1]  + ":8080/AlgoritmoISIS").build();
+				WebTarget target = proceso.target(uri);
+				//Llamar al servicio
+				System.out.println(target.path("rest/Servidor/enviarPropuesta").queryParam("mensaje", msg).queryParam("destino", p).request(MediaType.TEXT_PLAIN).get(String.class));
+			}
+		}
 	}
 	
 	//Metodo run
 	public void run(){
 		//bucle de envio de mensajes
-		for(contador = 1 ; contador <= 10; contador++) {
+		for(contador = 1 ; contador <= 1; contador++) {
 			try {
-				this.multicast(mensaje(this.orden));
+				this.multicast(mensaje(this.orden), 0);
 				long time = (long)(Math.random()*(5-2)+2);
 				Thread.sleep(time*100);
 			} catch (InterruptedException e) {
