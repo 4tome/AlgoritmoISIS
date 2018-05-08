@@ -1,5 +1,9 @@
 package servicios;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.URI;
 import java.util.ArrayList;
 //import java.util.Arrays;
@@ -21,10 +25,11 @@ public class Proceso extends Thread {
 	private int orden;
 	private Semaphore semTiempo;
 	private Semaphore sem_Mensajes;
-	//private Semaphore sem_Cola;
+	private Semaphore sem_Fichero;
 	private Semaphore sem_Propuestas;
 	private Mensaje Mensaje;//mensaje que envia el proceso
 	private int numPropuestas = 2;
+	private String rutaLog;
 	
 	//Constructor
 	public Proceso(String id, int time, int numProcess){
@@ -32,9 +37,30 @@ public class Proceso extends Thread {
 		this.orden = time;
 		this.semTiempo = new Semaphore(1);
 		this.sem_Mensajes = new Semaphore(1);
-		//this.sem_Cola = new Semaphore(1);
+		this.sem_Fichero = new Semaphore(1);
 		//this.numProcess = numProcess;
 		this.sem_Propuestas = new Semaphore(1);
+		this.rutaLog = "/home/amateos/Documentos/logs/";
+		
+		try {
+			sem_Fichero.acquire(1);
+			File fichero = new File(this.rutaLog + "proceso" + this.id + ".log");
+			if(fichero.exists()) {
+				fichero.delete();
+			}else {
+				try {
+					fichero.createNewFile();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			sem_Fichero.release(1);
+		} catch (InterruptedException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
 	}
 	
 	//Metodos para el incremento del tiempo logico (Lamport)
@@ -90,35 +116,6 @@ public class Proceso extends Thread {
 		return Propuesta;
 	}
 	
-	//Metodos para recibir los diferentes tipos de mensajes
-	public void recibirMsg(String msg)
-	{
-		
-		/*if(parts[2] != null && parts[2].equals("PROVISIONAL")) {
-			//Al recibir un mensaje de propuesta
-			
-			int i = busquedaMensaje(cola, parts[0]);
-			if (i != -1) {
-				//System.out.print("El mensaje original se encuentra en la cola " + parts[0] + " " + this.id);
-			}else {
-				System.out.print("El mensaje original no se encuentra en la cola " + parts[0] + ", " + this.id + " " + i + "\r");
-			}
-			/*if (i != 100) {
-				Mensaje.setOrden(Math.max(Mensaje.getOrden(), Integer.parseInt(parts[1])));
-				Mensaje.setNumP(Mensaje.getNumP() + 1);
-				//System.out.println("Mensaje: " + mensaje.getNumP());
-				if (Mensaje.getNumP() == this.numProcess) {
-					System.out.println("Mensajes propuesta recibidos " + this.id + ": " + Mensaje.getNumP());
-					Mensaje.setState("DEFINITIVO");
-					this.unicast(acuerdo(Mensaje.getId(),  Mensaje.getOrden()), 0);
-				}
-				
-			}else {
-			  	System.out.println("ERROR: No se ha encontrado el mensaje solicitado, " + parts[0] + " de P"  + this.id + " " + i);
-		    	this.servicioImprimirCola();
-			}*/
-
-	}
 	
 	public void recibirMensaje(String msg) {
 		LC1();
@@ -127,8 +124,8 @@ public class Proceso extends Thread {
 			sem_Mensajes.acquire(1);
 			Mensaje = new Mensaje(parts[0], Integer.parseInt(parts[1]), "PROVISIONAL", 0);
 			cola.add(Mensaje);
-			this.unicast(propuesta(parts[0], this.orden), Integer.parseInt(parts[0].substring(2,3)));
 			sem_Mensajes.release(1);
+			this.unicast(propuesta(parts[0], this.orden), Integer.parseInt(parts[0].substring(2,3)));
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -138,32 +135,58 @@ public class Proceso extends Thread {
 	public void recibirAcuerdo(String msg) {
 		String[] parts = msg.split(";");
 		LC2(Integer.parseInt(parts[1]));
-		/*try {
-			sem_Mensajes.acquire(1);*/
+		try {
+			sem_Mensajes.acquire(1);
 			Mensaje = busquedaMensaje(cola, parts[0]);
+			//sem_Mensajes.release(1);
 			if(Mensaje == null) {
 				System.out.println("ERROR: No se ha encontrado un mensaje ");
 			}else {
-				System.out.println("Mensaje definitivo recibido " + this.id);
+				//System.out.println("Mensaje definitivo recibido " + this.id);
+				//sem_Mensajes.acquire(1);
 				Mensaje.setOrden(Integer.parseInt(parts[1]));
 			    Mensaje.setState("DEFINITIVO");
+			    cola.sort(null);
+				Mensaje = cola.get(0);
+				int flag = 0;
+			    while (flag == 0 && Mensaje.getState().equals("DEFINITIVO")) {
+			    	//Escribir mensaje en fichero
+			    	FileWriter f = null;
+			        PrintWriter pw = null;
+			    	try {
+						f = new FileWriter(this.rutaLog + "proceso" + this.id + ".log", true);
+						sem_Fichero.acquire(1);
+						pw = new PrintWriter(f);
+						pw.println(Mensaje.getId() + " " + Mensaje.getOrden() + " " + Mensaje.getState());
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}finally {
+						try {
+							if (null != f) {
+								f.close();
+								pw.close();
+							}
+						} catch (Exception e2) {
+							e2.printStackTrace();
+						}
+					}
+			    	sem_Fichero.release(1);
+			    	cola.remove(0);
+			    	if(cola.isEmpty()) {
+			    		flag = 1;
+			    	}else {
+			    		Mensaje = cola.get(0);
+			    	}
+			    }
+			    sem_Mensajes.release(1);
+			
 			}
-			/*Mensaje = cola.get(0);
-			int flag = 0;
-		    while (flag == 0 && Mensaje.getState().equals("DEFINITIVO")) {
-		    	//Escribir mensaje en fichero
-		    	cola.remove(0);
-		    	if(cola.isEmpty()) {
-		    		flag = 1;
-		    	}else {
-		    		Mensaje = cola.get(0);
-		    	}
-		    }*/
-		/*	sem_Mensajes.release(1);
+			//sem_Mensajes.release(1);
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}*/		
+		}		
 	}
 	
 	public void recibirPropuesta (String msg) {
@@ -195,10 +218,9 @@ public class Proceso extends Thread {
 	}
 	
 	public Mensaje busquedaMensaje(ArrayList<Mensaje> cola, String id) {
-		for(int i = 0; i<cola.size(); i++) {	
+		for(int i = 0; i<cola.size(); i++) {
 			Mensaje mensaje = cola.get(i);
 			if (mensaje.getId().equals(id)) {
-				//sem_Mensajes.release(1);
 				return mensaje;
 			}
 		}
@@ -227,7 +249,7 @@ public class Proceso extends Thread {
 	//Metodo run
 	public void run(){
 		//bucle de envio de mensajes
-		for(contador =0; contador<2; contador++) {
+		for(contador = 1 ; contador <= 10; contador++) {
 			try {
 				this.multicast(mensaje(this.orden));
 				long time = (long)(Math.random()*(5-2)+2);
