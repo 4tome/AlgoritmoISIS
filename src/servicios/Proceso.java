@@ -117,35 +117,7 @@ public class Proceso extends Thread {
 			  	System.out.println("ERROR: No se ha encontrado el mensaje solicitado, " + parts[0] + " de P"  + this.id + " " + i);
 		    	this.servicioImprimirCola();
 			}*/
-		//}else if(parts[2] != null && parts[2].equals("DEFINITIVO")){
-			//Buscamos el mensaje en nuestra cola
-		    /*int i = busquedaMensaje(cola, parts[0]);
-		    if (i == 100) {
-		    	System.out.println("ERROR: No se ha encontrado el mensaje solicitado, " + parts[0] + " de P"  + this.id);
-		    	this.servicioImprimirCola();
-		    }else {
-		    	//sem_Mensajes.acquire(1);
-		    	Mensaje mensaje = cola.get(i);
-			    mensaje.setOrden(Integer.parseInt(parts[1]));
-			    mensaje.setState("DEFINITIVO");
-			    //sem_Mensajes.release(1);
-			    LC2(Integer.parseInt(parts[1]));
-		    }
-		    //sem_Mensajes.acquire(1);
-		    cola.sort(null);*/
-		    //sem_Mensajes.release(1);
-		    //Estraer los mensajes que ya estend en definitivo y eliminarlos de la cola, tras escribirlo en un log
-		    /*int flag = 0;
-		    mensaje = cola.get(0);
-		    while (flag == 0 && mensaje.getState().equals("DEFINITIVO")) {
-		    	//Escribir mensaje en fichero
-		    	cola.remove(0);
-		    	if(cola.isEmpty()) {
-		    		flag = 1;
-		    	}else {
-		    		mensaje = cola.get(0);
-		    	}
-		    }*/
+
 	}
 	
 	public void recibirMensaje(String msg) {
@@ -176,7 +148,7 @@ public class Proceso extends Thread {
 				Mensaje.setOrden(Integer.parseInt(parts[1]));
 			    Mensaje.setState("DEFINITIVO");
 			}
-			Mensaje = cola.get(0);
+			/*Mensaje = cola.get(0);
 			int flag = 0;
 		    while (flag == 0 && Mensaje.getState().equals("DEFINITIVO")) {
 		    	//Escribir mensaje en fichero
@@ -186,7 +158,7 @@ public class Proceso extends Thread {
 		    	}else {
 		    		Mensaje = cola.get(0);
 		    	}
-		    }
+		    }*/
 		/*	sem_Mensajes.release(1);
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
@@ -204,6 +176,7 @@ public class Proceso extends Thread {
 			if(Mensaje == null) {
 				System.out.println("ERROR: No se ha encontrado un mensaje ");
 			}else {
+				Mensaje.setOrden(Math.max(Mensaje.getOrden(), Integer.parseInt(parts[1])));
 				Mensaje.setNumP(Mensaje.getNumP() + 1);
 				//System.out.println("Mensaje " + Mensaje.getId() + " ha recibido " + Mensaje.getNumP() + " propuesta");
 				if(Mensaje.getNumP() == numPropuestas) {
@@ -254,7 +227,7 @@ public class Proceso extends Thread {
 	//Metodo run
 	public void run(){
 		//bucle de envio de mensajes
-		for(contador =0; contador<1; contador++) {
+		for(contador =0; contador<2; contador++) {
 			try {
 				this.multicast(mensaje(this.orden));
 				long time = (long)(Math.random()*(5-2)+2);
