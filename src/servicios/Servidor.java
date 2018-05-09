@@ -12,12 +12,12 @@ import javax.ws.rs.core.MediaType;
 public class Servidor {
 	private Proceso p1;
 	private Proceso p2;
-	private String[][] arrayProcesos = {{"P01","localhost"},{"P02","localhost"}};
-	private String[] arrayDispatcher = {"localhost"};
+	private String[][] arrayProcesos = {{"P01","172.28.171.113"},{"P02","172.28.171.113"},{"P03","172.28.171.113"},{"P04","172.28.171.113"}};
+	private String[] arrayDispatcher = {"172.28.171.113", "172.28.236.144"};
 	public Servidor(){
 		//Creamos los procesos
-		p1 = new Proceso("01", 0, 2, arrayProcesos, arrayDispatcher);
-		p2 = new Proceso("02", 0, 2, arrayProcesos, arrayDispatcher); 
+		p1 = new Proceso("01", 0, 4, arrayProcesos, arrayDispatcher);
+		p2 = new Proceso("02", 0, 4, arrayProcesos, arrayDispatcher); 
 		//Arrancamos los procesos
 		p1.start();
 		p2.start();

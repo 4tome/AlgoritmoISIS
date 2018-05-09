@@ -261,7 +261,7 @@ public class Proceso extends Thread {
 			try {
 				this.multicast(mensaje(this.orden), 0);
 				long time = (long)(Math.random()*(5-2)+2);
-				Thread.sleep(time*100);
+				Thread.sleep(1000 + (time*100));
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
