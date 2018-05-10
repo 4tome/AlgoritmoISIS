@@ -1,11 +1,23 @@
 package servicios;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.net.URI;
+
 import javax.inject.Singleton;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.UriBuilder;
 
 @Singleton 
 @Path("Servidor")
@@ -79,6 +91,85 @@ public class Servidor {
 			p2.recibirAcuerdo(msg);
 			return "DEFINITIVO " + msg + " ENVIADO A " + destino;
 		}
+	}
+
+	//Servicio para recoger los logs de las máquinas
+	@Path("recogerLog")
+	@GET 
+	@Produces(MediaType.TEXT_PLAIN)
+	public String recogerLog(@QueryParam(value="proceso")String idProc)
+	{
+		String ruta = System.getProperty("user.home");
+		BufferedReader br = null;
+		FileReader fr = null;
+		String contenido = "";
+		try {
+			fr = new FileReader(ruta + "/proceso" + idProc + ".log");
+			br = new BufferedReader(fr);
+			String sCurrentLine;
+			while ((sCurrentLine = br.readLine()) != null) {
+				contenido = contenido  + sCurrentLine + "\n";
+				System.out.println(sCurrentLine);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				if (br != null)
+					br.close();
+				if (fr != null)
+					fr.close();
+			} catch (IOException ex) {
+				ex.printStackTrace();
+			}
+		}
+		//volver a guardar el contenido //pasar tambien por parametro la IP
+		return contenido;
+	}
+	
+	@Path("verificarLogs")
+	@GET 
+	@Produces(MediaType.TEXT_PLAIN)
+	public String verificarLogs()
+	{
+		FileWriter f = null;
+		PrintWriter pw = null;
+		
+		for(int i=0; i<arrayProcesos.length; i++){
+			File fichero = new File("/home/amateos/Documentos/logs" + "/proceso" + arrayProcesos[i][0].substring(1, 3) + ".log");
+			if(fichero.exists()) {
+				fichero.delete();
+			}else {
+				try {
+					fichero.createNewFile();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			Client client = ClientBuilder.newClient();
+			URI uri = UriBuilder.fromUri( "http://"+ arrayProcesos[i][1] +":8080/AlgoritmoISIS/rest/Servidor/recogerLog/").build();
+			WebTarget target = client.target( uri);
+			String contenido = target.queryParam("proceso", arrayProcesos[i][0].substring(1, 3)).request(MediaType.TEXT_PLAIN).get( String.class);		
+			try {
+				f = new FileWriter("/home/amateos/Documentos/logs" + "/proceso" + arrayProcesos[i][0].substring(1, 3) + ".log", true);
+				pw = new PrintWriter(f);
+				pw.println(contenido);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}finally {
+				try {
+					if (null != f) {
+						f.close();
+						pw.close();
+					}
+				} catch (Exception e2) {
+					e2.printStackTrace();
+				}
+			}
+		}		
+		return "Logs recibidos";
 	}
 	
 }
