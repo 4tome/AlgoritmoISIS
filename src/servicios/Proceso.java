@@ -6,10 +6,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URI;
 import java.util.ArrayList;
-//import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.Semaphore;
-
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;
@@ -17,35 +14,46 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.UriBuilder;
 
 public class Proceso extends Thread {
-	private String id;
-	private int contador;
-	private ArrayList<Mensaje> cola = new ArrayList<Mensaje>();
-	private ArrayList<Mensaje> listaPropuestas = new ArrayList<Mensaje>();
-	private int orden;
+	//Semaforos
 	private Semaphore semTiempo;
 	private Semaphore sem_Mensajes;
 	private Semaphore sem_Fichero;
 	private Semaphore sem_Propuestas;
-	private Mensaje Mensaje;//mensaje que envia el proceso
+	private Semaphore sem_Proceso;
+	//Arrays
+	private ArrayList<Mensaje> cola = new ArrayList<Mensaje>();
+	private ArrayList<Mensaje> listaPropuestas = new ArrayList<Mensaje>();
+	//Variables
+	private String id;
+	private int orden;
 	private int numProcesos;
+	private int numMensajes;
 	private String rutaLog;
 	private String[][] arrayProcesos;
-	private String[] arrayDispatcher;
+
+	private Mensaje Mensaje;//mensaje que envia el proceso
+	private int contador;
+	
 	
 	//Constructor
-	public Proceso(String id, int time, int numProcess, String[][] arrayProcesos, String[] arrayDispatcher){
-		this.id = id;
-		this.orden = time;
+	public Proceso(String id, int time, int numProcess, String[][] arrayProcesos){
+		//Iniciamos los semaforos
 		this.semTiempo = new Semaphore(1);
 		this.sem_Mensajes = new Semaphore(1);
 		this.sem_Fichero = new Semaphore(1);
-		this.numProcesos = numProcess;
 		this.sem_Propuestas = new Semaphore(1);
+		this.sem_Proceso = new Semaphore(1);
+		//Arrays de mensajes
 		this.arrayProcesos = arrayProcesos;
-		this.arrayDispatcher = arrayDispatcher;
+		//Variables
 		this.rutaLog = System.getProperty("user.home");
+		this.numMensajes = 0;
+		this.id = id;
+		this.orden = time;
+		this.numProcesos = numProcess;
 		
 		try {
+			sem_Proceso.acquire(1);
 			sem_Fichero.acquire(1);
 			File fichero = new File(this.rutaLog + "/proceso" + this.id + ".log");
 			if(fichero.exists()) {
@@ -97,6 +105,7 @@ public class Proceso extends Thread {
 		String newId = "P" + this.id + " " + this.contador;
 		String nuevo = newId + ";" + this.orden + ";" + " " + ";";
 		Mensaje = new Mensaje(newId, this.orden, "PROVISIONAL", 0);
+		//Guardar mensaje para propuestas
 		try {
 			sem_Propuestas.acquire(1);
 			listaPropuestas.add(Mensaje);
@@ -119,7 +128,7 @@ public class Proceso extends Thread {
 		return Propuesta;
 	}
 	
-	
+	//Métodos de recepción de mensajes
 	public void recibirMensaje(String msg) {
 		LC1();
 		String[] parts = msg.split(";");
@@ -141,12 +150,9 @@ public class Proceso extends Thread {
 		try {
 			sem_Mensajes.acquire(1);
 			Mensaje = busquedaMensaje(cola, parts[0]);
-			//sem_Mensajes.release(1);
 			if(Mensaje == null) {
 				System.out.println("ERROR: No se ha encontrado el mensaje de la cola ");
 			}else {
-				//System.out.println("Mensaje definitivo recibido " + this.id);
-				//sem_Mensajes.acquire(1);
 				Mensaje.setOrden(Integer.parseInt(parts[1]));
 			    Mensaje.setState("DEFINITIVO");
 			    cola.sort(null);
@@ -161,6 +167,11 @@ public class Proceso extends Thread {
 						sem_Fichero.acquire(1);
 						pw = new PrintWriter(f);
 						pw.println(Mensaje.getId() + " " + Mensaje.getOrden() + " " + Mensaje.getState());
+						//Comprobar si se han escrito todos los mensajes enviados
+						this.numMensajes += 1;
+						if (this.numMensajes == (10*2)) {
+							sem_Proceso.release(1);
+						}
 					} catch (IOException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -185,7 +196,6 @@ public class Proceso extends Thread {
 			    sem_Mensajes.release(1);
 			
 			}
-			//sem_Mensajes.release(1);
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -204,10 +214,7 @@ public class Proceso extends Thread {
 			}else {
 				Mensaje.setOrden(Math.max(Mensaje.getOrden(), Integer.parseInt(parts[1])));
 				Mensaje.setNumP(Mensaje.getNumP() + 1);
-				//System.out.println("Mensaje " + Mensaje.getId() + " ha recibido " + Mensaje.getNumP() + " propuesta");
 				if(Mensaje.getNumP() == numProcesos) {
-					//System.out.println("He recibido todas las propuestas del mensaje " + Mensaje.getId());
-					//Enviar Definitivo
 					this.multicast(acuerdo(Mensaje.getId(),  Mensaje.getOrden()), 1);
 				}
 				sem_Propuestas.release(1);
@@ -233,11 +240,23 @@ public class Proceso extends Thread {
 	//Metodos para el envio de mensajes (multicast, unicast)
 	public void multicast(String mensaje, int destino){
 		Client proceso = ClientBuilder.newClient();
-		for(int i=0; i<arrayDispatcher.length; i++) {
-			URI uri = UriBuilder.fromUri("http://" + arrayDispatcher[i] + ":8080/AlgoritmoISIS").build();
+		for(int i=0; i<arrayProcesos.length; i++) {
+			URI uri = UriBuilder.fromUri("http://" + arrayProcesos[i][1] + ":8080/AlgoritmoISIS").build();
 			WebTarget target = proceso.target(uri);
 			//Llamar al servicio
-			System.out.println(target.path("rest/Servidor/enviarMensaje").queryParam("mensaje", mensaje).queryParam("destino", destino).request(MediaType.TEXT_PLAIN).get(String.class));
+			//delay
+			long time = (long)(Math.random()*(5-2)+2);
+			try {
+				Thread.sleep((time*100));
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			if (destino == 0) {
+				System.out.println(target.path("rest/Servidor/multicast").queryParam("mensaje", mensaje).queryParam("destino", arrayProcesos[i][0]).request(MediaType.TEXT_PLAIN).get(String.class));
+			}else {
+				System.out.println(target.path("rest/Servidor/multicastDefinitivo").queryParam("mensaje", mensaje).queryParam("destino", arrayProcesos[i][0]).request(MediaType.TEXT_PLAIN).get(String.class));
+			}	
 		}
 	}
 	
@@ -249,7 +268,7 @@ public class Proceso extends Thread {
 				URI uri = UriBuilder.fromUri("http://" + arrayProcesos[i][1]  + ":8080/AlgoritmoISIS").build();
 				WebTarget target = proceso.target(uri);
 				//Llamar al servicio
-				System.out.println(target.path("rest/Servidor/enviarPropuesta").queryParam("mensaje", msg).queryParam("destino", p).request(MediaType.TEXT_PLAIN).get(String.class));
+				System.out.println(target.path("rest/Servidor/enviarMensaje").queryParam("mensaje", msg).queryParam("destino", p).request(MediaType.TEXT_PLAIN).get(String.class));
 			}
 		}
 	}
@@ -257,29 +276,17 @@ public class Proceso extends Thread {
 	//Metodo run
 	public void run(){
 		//bucle de envio de mensajes
-		for(contador = 1 ; contador <= 1; contador++) {
-			try {
+		try {
+			for(contador = 1 ; contador <= 10; contador++) {
 				this.multicast(mensaje(this.orden), 0);
-				long time = (long)(Math.random()*(5-2)+2);
+				long time = (long)(Math.random()*(5-0)+0);
 				Thread.sleep(1000 + (time*100));
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
 			}
+			sem_Proceso.acquire(1);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
+		sem_Proceso.release(1);
 	}
-	
-	//Métodos de comprobación
-	public void imprimirCola(List<Mensaje> cola) {
-		for (int index=0; index<cola.size(); index++) {
-			Mensaje mensaje = cola.get(index);
-			System.out.println(mensaje.imprimir() + " --> " + this.id);
-		}
-	}
-	
-	public void servicioImprimirCola() {
-		System.out.println("Mostrar cola " + this.id);
-		imprimirCola(this.cola);
-	}
-
 }

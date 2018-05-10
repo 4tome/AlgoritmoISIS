@@ -10,14 +10,17 @@ import javax.ws.rs.core.MediaType;
 @Singleton 
 @Path("Servidor")
 public class Servidor {
+	//Procesos que controla el Dispatcher
 	private Proceso p1;
 	private Proceso p2;
-	private String[][] arrayProcesos = {{"P01","172.28.171.113"},{"P02","172.28.171.113"},{"P03","172.28.171.113"},{"P04","172.28.171.113"}};
-	private String[] arrayDispatcher = {"172.28.171.113", "172.28.236.144"};
+	private int numProcesos = 2;
+	//Array de los procesos del sistema
+	private String[][] arrayProcesos = {{"P01","localhost"},{"P02","localhost"}};
+	
 	public Servidor(){
 		//Creamos los procesos
-		p1 = new Proceso("01", 0, 4, arrayProcesos, arrayDispatcher);
-		p2 = new Proceso("02", 0, 4, arrayProcesos, arrayDispatcher); 
+		p1 = new Proceso("01", 0, numProcesos, arrayProcesos);
+		p2 = new Proceso("02", 0, numProcesos, arrayProcesos); 
 		//Arrancamos los procesos
 		p1.start();
 		p2.start();
@@ -33,29 +36,10 @@ public class Servidor {
 		return "Procesos creados satisfactoriamente";
 	}
 	
-	
 	@GET //tipo de petici�n HTTP
 	@Produces(MediaType.TEXT_PLAIN) //tipo de texto devuelto
 	@Path("enviarMensaje") //ruta al m�todo
 	public String enviarMensaje(@QueryParam(value="mensaje")String msg,
-								@QueryParam(value="destino")Integer destino) //el m�todo debe retornar String
-	{ 
-		if (destino == 1) {
-			p1.recibirAcuerdo(msg);
-			p2.recibirAcuerdo(msg);
-			return "DEFINITIVO " + msg + " ENVIADO";
-		}else {
-			p1.recibirMensaje(msg);
-			p2.recibirMensaje(msg);
-			return "MENSAJE " + msg + " ENVIADO";
-		}
-		
-	}
-	
-	@GET //tipo de petici�n HTTP
-	@Produces(MediaType.TEXT_PLAIN) //tipo de texto devuelto
-	@Path("enviarPropuesta") //ruta al m�todo
-	public String enviarPropuesta(@QueryParam(value="mensaje")String msg,
 								@QueryParam(value="destino")String destino) //el m�todo debe retornar String
 	{ 
 		if (destino.equals("P01")) {
@@ -67,27 +51,34 @@ public class Servidor {
 		}
 	}
 	
-	//Servicios de comprobación
-
-	@Path("compruebaP1")
-	@GET 
-	@Produces(MediaType.TEXT_PLAIN)
-	public String compruebap1()
-	{
-		System.out.println("------------------------------------Cola p1----------------------------");
-		p1.servicioImprimirCola();
-		//Servicio para arrancar los procesos.
-		return "comprobacion de la cola de p1";
+	@GET //tipo de petici�n HTTP
+	@Produces(MediaType.TEXT_PLAIN) //tipo de texto devuelto
+	@Path("multicast") //ruta al m�todo
+	public String multicast(@QueryParam(value="mensaje")String msg,
+								@QueryParam(value="destino")String destino) //el m�todo debe retornar String
+	{ 
+		if (destino.equals("P01")) {
+			p1.recibirMensaje(msg);
+			return "MENSAJE " + msg + " ENVIADO A " + destino;
+		}else {
+			p2.recibirMensaje(msg);
+			return "MENSAJE " + msg + " ENVIADO A " + destino;
+		}
 	}
 	
-	@Path("compruebaP2")
-	@GET 
-	@Produces(MediaType.TEXT_PLAIN)
-	public String compruebap2()
-	{
-		System.out.println("------------------------------------Cola p2----------------------------");
-		p2.servicioImprimirCola();
-		//Servicio para arrancar los procesos.
-		return "comprobacion de la cola de p2";
+	@GET //tipo de petici�n HTTP
+	@Produces(MediaType.TEXT_PLAIN) //tipo de texto devuelto
+	@Path("multicastDefinitivo") //ruta al m�todo
+	public String multicastDefinitivo(@QueryParam(value="mensaje")String msg,
+								@QueryParam(value="destino")String destino) //el m�todo debe retornar String
+	{ 
+		if (destino.equals("P01")) {
+			p1.recibirAcuerdo(msg);
+			return "DEFINITIVO " + msg + " ENVIADO A " + destino;
+		}else {
+			p2.recibirAcuerdo(msg);
+			return "DEFINITIVO " + msg + " ENVIADO A " + destino;
+		}
 	}
+	
 }
