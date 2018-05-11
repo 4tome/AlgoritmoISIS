@@ -107,9 +107,9 @@ public class Proceso extends Thread {
 		Mensaje = new Mensaje(newId, this.orden, "PROVISIONAL", 0);
 		//Guardar mensaje para propuestas
 		try {
-			sem_Propuestas.acquire(1);
+			sem_Proceso.acquire(1);
 			listaPropuestas.add(Mensaje);
-			sem_Propuestas.release(1);
+			sem_Proceso.release(1);
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -207,8 +207,10 @@ public class Proceso extends Thread {
 		LC2(Integer.parseInt(parts[1]));
 		//Busqueda del mensaje enviado
 		try {
-			sem_Propuestas.acquire(1);
+			sem_Mensajes.acquire(1);
+			sem_Propuestas.acquire();
 			Mensaje = busquedaMensaje(listaPropuestas, parts[0]);
+			sem_Propuestas.release(1);
 			if(Mensaje == null) {
 				System.out.println("ERROR: No se ha encontrado el mensaje de propuesta");
 			}else {
@@ -217,7 +219,7 @@ public class Proceso extends Thread {
 				if(Mensaje.getNumP() == numProcesos) {
 					this.multicast(acuerdo(Mensaje.getId(),  Mensaje.getOrden()), 1);
 				}
-				sem_Propuestas.release(1);
+				sem_Mensajes.release(1);
 			}
 			
 		} catch (InterruptedException e) {
@@ -277,7 +279,7 @@ public class Proceso extends Thread {
 	public void run(){
 		//bucle de envio de mensajes
 		try {
-			for(contador = 1 ; contador <= 10; contador++) {
+			for(contador = 1 ; contador <= 100; contador++) {
 				this.multicast(mensaje(this.orden), 0);
 				long time = (long)(Math.random()*(5-0)+0);
 				Thread.sleep(1000 + (time*100));
